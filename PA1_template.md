@@ -1,19 +1,14 @@
----
-title: "coursera"
-author: "Jochen Schmiedbauer"
-date: "Sunday, November 16, 2014"
-output:
-  html_document:
-    keep_md: yes
----
+# coursera
+Jochen Schmiedbauer  
+Sunday, November 16, 2014  
     Coursera course Reproducible Research Project Assignment 1
 ======================================
     ## Setting Knitr options
     
-```{r setoptions }
+
+```r
 library(knitr)
 opts_chunk$set(fig.path = "figures/" )
-
 ```
     
     
@@ -21,125 +16,136 @@ opts_chunk$set(fig.path = "figures/" )
     
     The data is stored in a csv file and the working directory is set to the file location.
 
-```{r loaddata}
+
+```r
 setwd("D:/Temp/coursera/reprod_research") ## make sure that the file is present in this directory.
 data <- read.csv("activity.csv")
 data$date <- as.Date(data$date, format = "%Y-%m-%d")
-
 ```
 
 ## Histogram
 
 Make a histogram of the total number of steps taken each day.
 
-```{r 1_Histogram_steps_per_day, fig.width = 12}
+
+```r
 library("ggplot2")
 dailySteps <- aggregate(steps ~ date, data, sum)
 ggplot(data,aes(date)) + geom_histogram(aes(weight=steps),binwidth=1)
-
 ```
+
+![plot of chunk 1_Histogram_steps_per_day](figures/1_Histogram_steps_per_day.png) 
 
 ## Mean and Median Steps per day
 
 Calculate and report the mean and median total number of steps taken per day.
 
-```{r Descriptive mean}
+
+```r
 dMean <- mean(dailySteps$steps)
 ```
 
-The mean is `r dMean`
+The mean is 1.0766 &times; 10<sup>4</sup>
 
-```{r Descriptive median}
+
+```r
 dMedian <- median(dailySteps$steps)
-
 ```
 
-The median is `r dMedian`
+The median is 10765
 
 ## Mean steps per interval
 
 Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).
 
-```{r 2_Interval_Graph_wo_NA, fig.width = 12}
+
+```r
 mInterval <- aggregate(steps ~ interval, data, mean)
 ggplot(mInterval, aes(interval,steps)) + geom_line()
-
 ```
+
+![plot of chunk 2_Interval_Graph_wo_NA](figures/2_Interval_Graph_wo_NA.png) 
 
 ## 5 minute interval with max number of average steps
 
 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
-```{r Max}
+
+```r
 maxR <- which.max(mInterval$steps)
 maxI <- mInterval$interval[maxR]
 maxS <- mInterval$steps[maxR]
 ```
-The max interval average is `r maxI` with `r maxS` steps.
+The max interval average is 835 with 206.1698 steps.
 
 ##Missing Values
 
 Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
-```{r}
+
+```r
 missing <- sum(is.na(data$steps))
 ```
-There are `r missing` missing values. (NA rows)
+There are 2304 missing values. (NA rows)
 
 ## Replace NA's with Mean steps per interval
 
 using the mean number of steps per interval as replacement for the missing values.
 
-```{r replaceErrors}
+
+```r
 oldData <- data
 fn <- function(steps,interval) ifelse(is.na(steps),mInterval$steps[mInterval$interval==interval],steps)
 data$steps <- apply(data[,c("steps","interval")],1, function(y) fn(y["steps"],y["interval"]) )
-
 ```
 ##Histogram with nulls replaced by interval averages
 
-```{r 3_Histogram_steps_per_day_including_NA, fig.width=12}
 
+```r
 dailySteps2 <- aggregate(steps ~ date, data, sum)
 ggplot(data,aes(date)) + geom_histogram(aes(weight=steps),binwidth=1)
-
 ```
+
+![plot of chunk 3_Histogram_steps_per_day_including_NA](figures/3_Histogram_steps_per_day_including_NA.png) 
 ##New Mean and Median
 
-```{r Descriptive Mean}
+
+```r
 dMean2 <- mean(dailySteps2$steps)
 ```
 
-The mean is `r dMean2`
+The mean is 1.0766 &times; 10<sup>4</sup>
 
-```{r Descriptive Median}
+
+```r
 dMedian2 <- median(dailySteps2$steps)
 ```
 
-The mean is `r dMedian2`
+The mean is 1.0766 &times; 10<sup>4</sup>
 
 ##Change in Mean and Median
 
-```{r BeforeAfter}
+
+```r
 MeanDiff = dMean2 - dMean
 MedianDiff = dMedian2 - dMedian
-
 ```
 Impact of filling missing values:
-    The mean changed by `r MeanDiff` steps and 
-    the median changed by `r MedianDiff` steps.
+    The mean changed by 0 steps and 
+    the median changed by 1.1887 steps.
 
 ##Days of the week
 
-```{r}
+
+```r
 dowFn <- function(day) ifelse(is.na(match(weekdays(day), c("Saturday","Sunday"))),"Weekday","Weekend")
 data$dow <- factor(apply(data["date"],1,function(y) dowFn(as.Date(y["date"]))))
-
 ```
 
 ##Compute average interval steps for weekends and weekdays
 
-```{r}
+
+```r
 weekend <- data[data$dow=="Weekend",]
 weekday <- data[data$dow=="Weekday",]
 
@@ -152,8 +158,10 @@ CombMeans <- rbind(wkdMean,wkendMean)
 
 ##Weekday versus weekend interval averages
 
-```{r 4_weekday_versus_weekend, fig.width=12}
+
+```r
 library(lattice)
 xyplot(steps ~ interval|dow, data = CombMeans, layout = c(1,2), type = "l")
-
 ```
+
+![plot of chunk 4_weekday_versus_weekend](figures/4_weekday_versus_weekend.png) 
