@@ -1,25 +1,157 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "coursera"
+author: "Jochen Schmiedbauer"
+date: "Sunday, November 16, 2014"
+output: html_document
 ---
+    Coursera course Reproducible Research Project Assignment 1
+======================================
+    ## Setting Knitr options
+    
+```{r setoptions }
+library(knitr)
+opts_chunk$set(fig.path = "figures/" )
 
+```
+    
+    
+    ## Loading and preprocessing the data
+    
+    The data is stored in a csv file and the working directory is set to the file location.
 
-## Loading and preprocessing the data
+```{r loaddata}
+setwd("D:/Temp/coursera/reprod_research") ## make sure that the file is present in this directory.
+data <- read.csv("activity.csv")
+data$date <- as.Date(data$date, format = "%Y-%m-%d")
 
+```
 
+## Histogram
 
-## What is mean total number of steps taken per day?
+Make a histogram of the total number of steps taken each day.
 
+```{r 1_Histogram_steps_per_day, fig.width = 12}
+library("ggplot2")
+dailySteps <- aggregate(steps ~ date, data, sum)
+ggplot(data,aes(date)) + geom_histogram(aes(weight=steps),binwidth=1)
 
+```
 
-## What is the average daily activity pattern?
+## Mean and Median Steps per day
 
+Calculate and report the mean and median total number of steps taken per day.
 
+```{r Descriptive mean}
+dMean <- mean(dailySteps$steps)
+```
 
-## Imputing missing values
+The mean is `r dMean`
 
+```{r Descriptive median}
+dMedian <- median(dailySteps$steps)
 
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+The median is `r dMedian`
+
+## Mean steps per interval
+
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).
+
+```{r 2_Interval_Graph_wo_NA, fig.width = 12}
+mInterval <- aggregate(steps ~ interval, data, mean)
+ggplot(mInterval, aes(interval,steps)) + geom_line()
+
+```
+
+## 5 minute interval with max number of average steps
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r Max}
+maxR <- which.max(mInterval$steps)
+maxI <- mInterval$interval[maxR]
+maxS <- mInterval$steps[maxR]
+```
+The max interval average is `r maxI` with `r maxS` steps.
+
+##Missing Values
+
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+```{r}
+missing <- sum(is.na(data$steps))
+```
+There are `r missing` missing values. (NA rows)
+
+## Replace NA's with Mean steps per interval
+
+using the mean number of steps per interval as replacement for the missing values.
+
+```{r replaceErrors}
+oldData <- data
+fn <- function(steps,interval) ifelse(is.na(steps),mInterval$steps[mInterval$interval==interval],steps)
+data$steps <- apply(data[,c("steps","interval")],1, function(y) fn(y["steps"],y["interval"]) )
+
+```
+##Histogram with nulls replaced by interval averages
+
+```{r 3_Histogram_steps_per_day_including_NA, fig.width=12}
+
+dailySteps2 <- aggregate(steps ~ date, data, sum)
+ggplot(data,aes(date)) + geom_histogram(aes(weight=steps),binwidth=1)
+
+```
+##New Mean and Median
+
+```{r Descriptive Mean}
+dMean2 <- mean(dailySteps2$steps)
+```
+
+The mean is `r dMean2`
+
+```{r Descriptive Median}
+dMedian2 <- median(dailySteps2$steps)
+```
+
+The mean is `r dMedian2`
+
+##Change in Mean and Median
+
+```{r BeforeAfter}
+MeanDiff = dMean2 - dMean
+MedianDiff = dMedian2 - dMedian
+
+```
+Impact of filling missing values:
+    The mean changed by `r MeanDiff` steps and 
+    the median changed by `r MedianDiff` steps.
+
+##Days of the week
+
+```{r}
+dowFn <- function(day) ifelse(is.na(match(weekdays(day), c("Saturday","Sunday"))),"Weekday","Weekend")
+data$dow <- factor(apply(data["date"],1,function(y) dowFn(as.Date(y["date"]))))
+
+```
+
+##Compute average interval steps for weekends and weekdays
+
+```{r}
+weekend <- data[data$dow=="Weekend",]
+weekday <- data[data$dow=="Weekday",]
+
+wkdMean <- aggregate(steps ~ interval, weekday, mean)
+wkdMean$dow <- "Weekday"
+wkendMean <- aggregate(steps ~ interval, weekend, mean)
+wkendMean$dow <- "Weekend"
+CombMeans <- rbind(wkdMean,wkendMean)
+```
+
+##Weekday versus weekend interval averages
+
+```{r 4_weekday_versus_weekend, fig.width=12}
+library(lattice)
+xyplot(steps ~ interval|dow, data = CombMeans, layout = c(1,2), type = "l")
+
+```
